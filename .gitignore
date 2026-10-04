@@ -1,0 +1,12 @@
+# Visual Studio temporary files
+.vs/
+x64/
+Debug/
+Release/
+*.obj
+*.exe
+*.pdb
+*.user
+
+# Generated tracker logs
+memory_log.csv

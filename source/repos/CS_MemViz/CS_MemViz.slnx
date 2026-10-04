@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="CS_MemViz/CS_MemViz.vcxproj" Id="2e98849d-930e-44c8-9ef5-0a0b9a5718a6" />
+</Solution>
