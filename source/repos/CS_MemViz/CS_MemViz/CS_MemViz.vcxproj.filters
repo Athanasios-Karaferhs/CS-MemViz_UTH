@@ -15,48 +15,54 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\CS-MemViz\visualizer\src\imconfig.h">
+    <ClInclude Include="..\..\..\..\visualizer\src\imconfig.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\CS-MemViz\visualizer\src\imgui.h">
+    <ClInclude Include="..\..\..\..\visualizer\src\imgui.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\CS-MemViz\visualizer\src\imgui_impl_dx11.h">
+    <ClInclude Include="..\..\..\..\visualizer\src\imgui_impl_dx11.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\CS-MemViz\visualizer\src\imgui_impl_win32.h">
+    <ClInclude Include="..\..\..\..\visualizer\src\imgui_impl_win32.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\CS-MemViz\visualizer\src\imgui_internal.h">
+    <ClInclude Include="..\..\..\..\visualizer\src\imgui_internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\CS-MemViz\tracker\tracker.h">
+    <ClInclude Include="..\..\..\..\visualizer\src\imstb_rectpack.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\visualizer\src\imstb_textedit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\visualizer\src\imstb_truetype.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\CS-MemViz\visualizer\src\imgui.cpp">
+    <ClCompile Include="..\..\..\..\visualizer\src\imgui.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\CS-MemViz\visualizer\src\imgui_demo.cpp">
+    <ClCompile Include="..\..\..\..\visualizer\src\imgui_demo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\CS-MemViz\visualizer\src\imgui_draw.cpp">
+    <ClCompile Include="..\..\..\..\visualizer\src\imgui_draw.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\CS-MemViz\visualizer\src\imgui_impl_dx11.cpp">
+    <ClCompile Include="..\..\..\..\visualizer\src\imgui_impl_dx11.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\CS-MemViz\visualizer\src\imgui_impl_win32.cpp">
+    <ClCompile Include="..\..\..\..\visualizer\src\imgui_impl_win32.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\CS-MemViz\visualizer\src\imgui_tables.cpp">
+    <ClCompile Include="..\..\..\..\visualizer\src\imgui_tables.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\CS-MemViz\visualizer\src\imgui_widgets.cpp">
+    <ClCompile Include="..\..\..\..\visualizer\src\imgui_widgets.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\CS-MemViz\visualizer\src\main.cpp">
+    <ClCompile Include="..\..\..\..\visualizer\src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

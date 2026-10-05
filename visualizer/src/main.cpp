@@ -10,19 +10,23 @@
 #include <unordered_map>
 #include <vector>
 
-// Data structure to hold allocation
+// Data structure to hold allocation details
 struct Allocation {
-    size_t size;
+    size_t size = 0;
     std::string file;
-    int line;
+    int line = 0;
 };
 
-std::unordered_map<std::string, Allocation> active_allocations;
+using AllocMap = std::unordered_map<std::string, Allocation>;
 
-// Forward declarations for Win32 & DirectX 11
-static ID3D11Device* g_pd3dDevice = nullptr;
-static ID3D11DeviceContext* g_pd3dDeviceContext = nullptr;
-static IDXGISwapChain* g_pSwapChain = nullptr;
+// Each window owns its own data so refreshing one doesn't wipe the other
+AllocMap heap_allocs;   // Window 1: 1st year mode
+AllocMap node_allocs;   // Window 2: 2nd year mode
+
+// DirectX 11 globals
+static ID3D11Device*           g_pd3dDevice = nullptr;
+static ID3D11DeviceContext*    g_pd3dDeviceContext = nullptr;
+static IDXGISwapChain*         g_pSwapChain = nullptr;
 static ID3D11RenderTargetView* g_mainRenderTargetView = nullptr;
 
 bool CreateDeviceD3D(HWND hWnd);
@@ -31,14 +35,17 @@ void CreateRenderTarget();
 void CleanupRenderTarget();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-// Parse CSV Log File
-void ParseLogFile(const std::string& filename) {
-    active_allocations.clear();
+// Parse CSV log file into the given map
+// Format: EVENT,ADDRESS,SIZE,FILE,LINE   (EVENT = ALLOC or FREE)
+void ParseLogFile(const std::string& filename, AllocMap& out) {
+    out.clear();
     std::ifstream file(filename);
     if (!file.is_open()) return;
 
     std::string line;
     while (std::getline(file, line)) {
+        if (line.empty()) continue;
+
         std::stringstream ss(line);
         std::string event_type, address, size_str, source_file, line_str;
 
@@ -49,23 +56,28 @@ void ParseLogFile(const std::string& filename) {
         std::getline(ss, line_str, ',');
 
         if (event_type == "ALLOC") {
-            Allocation alloc;
-            alloc.size = std::stoull(size_str);
-            alloc.file = source_file;
-            alloc.line = std::stoi(line_str);
-            active_allocations[address] = alloc;
+            try {
+                Allocation alloc;
+                alloc.size = std::stoull(size_str);
+                alloc.file = source_file;
+                alloc.line = std::stoi(line_str);
+                out[address] = alloc;
+            }
+            catch (...) {
+                // Skip malformed lines (header row, bad numbers, etc.)
+            }
         }
         else if (event_type == "FREE") {
-            active_allocations.erase(address);
+            out.erase(address);
         }
     }
 }
 
 int main(int, char**) {
-    // Create Application Window
+    // Create application window
     WNDCLASSEXW wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"ImGui Example", nullptr };
     ::RegisterClassExW(&wc);
-    HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"CS MemViz - Memory Leak Debugger", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
+    HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"CS MemViz Memory Leak Debugger", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
 
     // Initialize Direct3D
     if (!CreateDeviceD3D(hwnd)) {
@@ -81,9 +93,10 @@ int main(int, char**) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.IniFilename = nullptr; // don't restore stale/off-screen window positions
     ImGui::StyleColorsDark();
 
-    // Setup Platform/Renderer backends
+    // Setup platform/renderer backends
     ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
 
@@ -97,53 +110,64 @@ int main(int, char**) {
         }
         if (!running) break;
 
-        // Start ImGui Frame for first year
+        // Start one ImGui frame for the entire application
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
-        //CUSTOM UI LOGIC STARTS HERE
-        ImGui::Begin("CS MemViz:Live Heap Status");
+        // ---------------- WINDOW 1: 1st year mode, heap status ----------------
+        ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
+        ImGui::Begin("CS MemViz: Live Heap Status");
 
-        if (ImGui::Button("Refresh Memory Log")) {
-            ParseLogFile("memory_log.csv");
+        if (ImGui::Button("Refresh Memory Log (1st Year)")) {
+            ParseLogFile("memory_log_1st_year.csv", heap_allocs);
         }
 
         ImGui::Separator();
 
-        if (active_allocations.empty()) {
+        if (heap_allocs.empty()) {
             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "No Memory Leaks Detected!");
         }
         else {
-            ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "Memory Leaks Detected: %d", (int)active_allocations.size());
+            ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "Memory Leaks Detected: %d", (int)heap_allocs.size());
             ImGui::Separator();
 
-            // Render active leaks as visual blocks
-            for (const auto& pair : active_allocations) {
-                ImGui::PushID(pair.first.c_str());
-
-                // Draw a red box for each leak
-                ImGui::Text("Address: %s", pair.first.c_str());
-                ImGui::SameLine();
-                ImGui::Text("| Size: %zu bytes", pair.second.size);
-                ImGui::SameLine();
-                ImGui::Text("| Location: %s : Line %d", pair.second.file.c_str(), pair.second.line);
-
+            for (const auto& pair : heap_allocs) {
+                ImGui::PushID((pair.first + "_1").c_str());
+                ImGui::Text("Address: %s | Size: %zu bytes | Location: %s : Line %d",
+                    pair.first.c_str(), pair.second.size, pair.second.file.c_str(), pair.second.line);
                 ImGui::PopID();
             }
         }
-
         ImGui::End();
-        //CUSTOM UI LOGIC ENDS HERE 
 
-        //Data struct 2nd frame -- unfinshed
-        ImGui_ImplDX11_NewFrame();
-        ImGui_ImplWin32_NewFrame();
-        ImGui::NewFrame();
+        // ---------------- WINDOW 2: 2nd year mode, data structures ----------------
+        ImGui::SetNextWindowPos(ImVec2(640, 20), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
+        ImGui::Begin("Data Structure | Live Connection Status");
 
-        ImGui::Begin("Data structure|Live connection status")
+        if (ImGui::Button("Refresh Memory Log (2nd Year)")) {
+            ParseLogFile("memory_log_2nd_year.csv", node_allocs);
+        }
 
-    
+        ImGui::Separator();
+
+        if (node_allocs.empty()) {
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "No Nodes Tracked!");
+        }
+        else {
+            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Active Nodes: %d", (int)node_allocs.size());
+            ImGui::Separator();
+
+            for (const auto& pair : node_allocs) {
+                ImGui::PushID((pair.first + "_2").c_str());
+                ImGui::Text("Node: %s | Size: %zu bytes", pair.first.c_str(), pair.second.size);
+                ImGui::PopID();
+            }
+        }
+        ImGui::End();
+
         // Rendering
         ImGui::Render();
         const float clear_color_with_alpha[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
@@ -151,7 +175,7 @@ int main(int, char**) {
         g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView, clear_color_with_alpha);
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
-        g_pSwapChain->Present(1, 0); // Present with vsync
+        g_pSwapChain->Present(1, 0); // vsync
     }
 
     // Cleanup
@@ -166,7 +190,7 @@ int main(int, char**) {
     return 0;
 }
 
-// Helper functions for DirectX 11
+// ---------------- DirectX 11 helpers ----------------
 bool CreateDeviceD3D(HWND hWnd) {
     DXGI_SWAP_CHAIN_DESC sd;
     ZeroMemory(&sd, sizeof(sd));
@@ -186,9 +210,9 @@ bool CreateDeviceD3D(HWND hWnd) {
 
     UINT createDeviceFlags = 0;
     D3D_FEATURE_LEVEL featureLevel;
-    const D3D_FEATURE_LEVEL featureLevelArray[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, };
+    const D3D_FEATURE_LEVEL featureLevelArray[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0 };
     HRESULT res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
-    if (res == DXGI_ERROR_UNSUPPORTED)
+    if (res == DXGI_ERROR_UNSUPPORTED) // try high-performance WARP software driver if hardware is not available
         res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
     if (res != S_OK) return false;
 
@@ -198,13 +222,13 @@ bool CreateDeviceD3D(HWND hWnd) {
 
 void CleanupDeviceD3D() {
     CleanupRenderTarget();
-    if (g_pSwapChain) { g_pSwapChain->Release(); g_pSwapChain = nullptr; }
+    if (g_pSwapChain)        { g_pSwapChain->Release();        g_pSwapChain = nullptr; }
     if (g_pd3dDeviceContext) { g_pd3dDeviceContext->Release(); g_pd3dDeviceContext = nullptr; }
-    if (g_pd3dDevice) { g_pd3dDevice->Release(); g_pd3dDevice = nullptr; }
+    if (g_pd3dDevice)        { g_pd3dDevice->Release();        g_pd3dDevice = nullptr; }
 }
 
 void CreateRenderTarget() {
-    ID3D11Texture2D* pBackBuffer;
+    ID3D11Texture2D* pBackBuffer = nullptr;
     g_pSwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
     g_pd3dDevice->CreateRenderTargetView(pBackBuffer, nullptr, &g_mainRenderTargetView);
     pBackBuffer->Release();
@@ -214,6 +238,7 @@ void CleanupRenderTarget() {
     if (g_mainRenderTargetView) { g_mainRenderTargetView->Release(); g_mainRenderTargetView = nullptr; }
 }
 
+// Forward declare message handler from imgui_impl_win32.cpp
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -229,7 +254,8 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         }
         return 0;
     case WM_SYSCOMMAND:
-        if ((wParam & 0xFFF0) == SC_KEYMENU) return 0;
+        if ((wParam & 0xFFF0) == SC_KEYMENU) // disable ALT application menu
+            return 0;
         break;
     case WM_DESTROY:
         ::PostQuitMessage(0);
