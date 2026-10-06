@@ -9,7 +9,7 @@ static inline void *track_malloc(size_t size, const char *file, int line)
 {
     void *ptr = malloc(size); // Execute the real malloc
 
-    FILE *log = fopen("memory_log_1st_year.csv", "a");
+    FILE *log = fopen("C:/Users/thano/CS-MemViz/source/repos/CS_MemViz/CS_MemViz/memory_log_1st_year.csv", "a");
     if (log)
     {
         // Log format: EVENT, ADDRESS, SIZE, FILENAME, LINE_NUMBER
@@ -21,7 +21,7 @@ static inline void *track_malloc(size_t size, const char *file, int line)
 
 static void track_free(void *ptr, const char *file, int line)
 {
-    FILE *log = fopen("memory_log_1st_year.csv", "a");
+    FILE *log = fopen("C:/Users/thano/CS-MemViz/source/repos/CS_MemViz/CS_MemViz/memory_log_1st_year.csv", "a");
     if (log && ptr != NULL)
     {
         fprintf(log, "FREE,%p,0,%s,%d\n", ptr, file, line);
