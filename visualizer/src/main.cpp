@@ -20,7 +20,45 @@ struct Allocation {
 using AllocMap = std::unordered_map<std::string, Allocation>;
 
 // Each window owns its own data so refreshing one doesn't wipe the other
-AllocMap heap_allocs;   // Window 1: 1st year mode
+struct PtrSnapshot {
+    std::string name, var_addr, target_addr, value;
+    size_t size = 0;
+    std::string file;
+    int line = 0;
+};
+
+std::vector<PtrSnapshot> ptr_snapshots;
+
+void ParsePtrLogFile(const std::string& filename, std::vector<PtrSnapshot>& out) {
+    out.clear();
+    std::ifstream file(filename);
+    if (!file.is_open()) return;
+
+    std::string line;
+    while (std::getline(file, line)) {
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (line.empty()) continue;
+
+        std::stringstream ss(line);
+        std::string tag, size_str, line_str;
+        PtrSnapshot s;
+
+        std::getline(ss, tag, ',');
+        if (tag != "PTR") continue;
+        std::getline(ss, s.name, ',');
+        std::getline(ss, s.var_addr, ',');
+        std::getline(ss, s.target_addr, ',');
+        std::getline(ss, s.value, ',');
+        std::getline(ss, size_str, ',');
+        std::getline(ss, s.file, ',');
+        std::getline(ss, line_str, ',');
+
+        try { s.size = std::stoull(size_str); s.line = std::stoi(line_str); }
+        catch (...) { continue; }
+
+        out.push_back(s);
+    }
+}
 //holds one line of the file: label, address, size, file
 struct NodeEntry {
     std::string label;
@@ -48,11 +86,13 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 void ParseLogFile(const std::string& filename, AllocMap& out) {
     out.clear();
     std::ifstream file(filename);
-    if (!file.is_open()) return;
+    if (!file.is_open())
+        return;
 
     std::string line;
     while (std::getline(file, line)) {
-        if (line.empty()) continue;
+        if (line.empty())
+            continue;
 
         std::stringstream ss(line);
         std::string event_type, address, size_str, source_file, line_str;
@@ -83,7 +123,8 @@ void ParseLogFile(const std::string& filename, AllocMap& out) {
 void ParseNodeLogFile(const std::string& filename, std::vector<NodeEntry>& out) {
     out.clear();
     std::ifstream file(filename);
-    if (!file.is_open()) return;
+    if (!file.is_open())
+        return;
 
     std::string line;
     while (std::getline(file, line)) {
@@ -111,7 +152,7 @@ int main(int, char**) {
     // Create application window
     WNDCLASSEXW wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"ImGui Example", nullptr };
     ::RegisterClassExW(&wc);
-    HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"CS MemViz Memory Leak Debugger", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
+    HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"CS MemViz Memory Leak Debugger  ", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
 
     // Initialize Direct3D
     if (!CreateDeviceD3D(hwnd)) {
@@ -152,34 +193,29 @@ int main(int, char**) {
         ImGui::NewFrame();
         
         //WINDOW 1:1st year mode, heap status
-        ImGui::SetNextWindowPos(ImVec2(0,0));
+         ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y));
-
-        ImGui::Begin("CS MemViz: Live Heap Status");
-        ImGui::Text("Memory Leak for Pointers");
-
+        ImGui::Begin("Pointers | Memory allocation");
+        ImGui::Text("Pointer snapshots");
         if (ImGui::Button("Refresh Memory Log (1st Year)")) {
-            ParseLogFile("memory_log_1st_year.csv", heap_allocs);
+            ParsePtrLogFile("memory_log_1st_year.csv", ptr_snapshots);
         }
-
         ImGui::Separator();
 
-        if (heap_allocs.empty()) {
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "No Memory Leaks Detected!");
+        if (ptr_snapshots.empty()) {
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "No pointer snapshots yet.");
         }
-        else {
-            ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "Memory Leaks Detected: %d", (int)heap_allocs.size());
-            ImGui::Separator();
-
-            for (const auto& pair : heap_allocs) {
-                ImGui::PushID((pair.first + "_1").c_str());
-                ImGui::Text("Address: %s | Size: %zu bytes | Location: %s : Line %d",
-                    pair.first.c_str(), pair.second.size, pair.second.file.c_str(), pair.second.line);
-                ImGui::PopID();
+        else {  
+            for (int i = 0; i < (int)ptr_snapshots.size(); i++) {   //castin at ptr>snaphots.size() cause of warning with signed/unsigned comparison
+                const PtrSnapshot& s = ptr_snapshots[i];
+                ImGui::PushID(i);   //give each row a unique ID(not strictly necessary but good for buttons)
+                ImGui::Text("%s  (at %s)  ->  %s  | value: %s | %zu bytes | %s : line %d",
+                    s.name.c_str(), s.var_addr.c_str(), s.target_addr.c_str(),
+                    s.value.c_str(), s.size, s.file.c_str(), s.line);
+                ImGui::PopID();     //give each row a unique ID(same here)
             }
         }
         ImGui::End();
-
 
 
         //WINDOW 2: 2nd year mode, data structures

@@ -18,7 +18,6 @@ int main()
 
   //  free(array_safe);
 
-    // We intentionally "forget" to free array_leaked
     printf("Done. Check memory_log.csv!\n");
 
     return 0;
