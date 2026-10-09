@@ -7,13 +7,13 @@
 int main()
 {
     // Clear the old log file for fresh testing
-    remove("memory_log_1st_year.csv");
+    remove("%USERPROFILE%\CS-MemViz\source\repos\CS_MemViz\CS_MemViz\memory_log_1st_year.csv");
 
     printf("Allocating memory...\n");
 
     // This will be logged as an ALLOC at line 13
-    int *array_leaked = (int *)malloc(10 * sizeof(int));
-
+    int *array_leaked = (int *)malloc(5 * sizeof(int));
+ 
     // This will be logged as an ALLOC at line 16, and FREE at line 18
     int *array_safe = (int *)malloc(5 * sizeof(int));
 
