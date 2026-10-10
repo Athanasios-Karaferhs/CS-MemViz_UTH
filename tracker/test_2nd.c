@@ -1,24 +1,32 @@
 #include <stdio.h>
-#include <stdlib.h>
-//last
-#include "tracker2nd.h"
+#include "TRACKER2nd.H"
 
-int main()
+typedef struct Node
 {
-    // Clear the old log file for fresh testing
-    remove("memory_log_2st_year.csv");
+  int data;
+  struct Node *next;
+} Node;
 
-    printf("Allocating memory...\n");
+typedef struct List
+{
+  Node *head;
+  size_t length;
+} List;
 
-    // This will be logged as an ALLOC at line 13
-    int *array_leaked = (int *)nodeTracker(10 * sizeof(int), __FILE__);
+int main(void)
+{
+  List *my_list = (List *)malloc(sizeof(List));
+  my_list->head = NULL;
+  my_list->length = 0;
 
-    // This will be logged as an ALLOC at line 16, and FREE at line 18
-    int *array_safe = (int *)nodeTracker(5 * sizeof(int), __FILE__);
+  Node *first_node = (Node *)malloc(sizeof(Node));
+  first_node->data = 42;
+  first_node->next = NULL;
 
-  //  free(array_safe);
+  my_list->head = first_node;
+  my_list->length = 1;
 
-    printf("Done. Check memory_log.csv!\n");
+  printf("List created with length %zu and data %d\n", my_list->length, my_list->head->data);
 
-    return 0;
+  return 0;
 }

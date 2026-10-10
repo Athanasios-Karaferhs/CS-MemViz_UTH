@@ -1,46 +1,50 @@
 #ifndef TRACKER2nd_H
 #define TRACKER2nd_H
 
+#ifdef TRACKER1st_H
+#error "Include only one tracker header: tracker1st.h and tracker2nd.h both redefine malloc."
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef struct MemoryNode
+#define path "/CS-MemViz/source/repos/CS_MemViz/CS_MemViz/memory_log_2st_year.csv"
+
+static inline const char *full_path(void)
 {
-    void *address;
-    size_t size;
-    struct MemoryNode *next;
-} MemoryNode;
+    static char full_path[512]; // static to let the OS claim its memory back
 
-//Node tracker to log mem allocation on 2nd .csv
-static inline void *nodeTracker(size_t size,const char *file){
-    MemoryNode *head = (MemoryNode *)malloc(sizeof(MemoryNode));
-
-    if (head == NULL)
+    const char *dir = getenv("USERPROFILE");
+    if (dir == NULL)
     {
-        fprintf(stderr, "Failed to allocate memory for MemoryNode\n");
-        return NULL;
+        printf("Error trying to find the users profile");
+        snprintf(full_path, sizeof(full_path), ".%s", path);
+        return full_path;
     }
 
-    FILE *log = fopen("memory_log_2st_year.csv", "a");
-    if(log){
-        fprintf(log, "PTR,%p,%zu,%s\n", head, size, file);
+    snprintf(full_path, sizeof(full_path), "%s%s", dir, path); // expects two string arguments
+    return full_path;
+}
+
+// Node tracker to log mem allocation on 2nd .csv
+static inline void *track_allocation(size_t size, const char *file, int line)
+{
+    void *ptr = malloc(size); // Allocates exact memory requested for struct
+    if (ptr == NULL)
+        return NULL;
+
+    FILE *log = fopen(full_path(), "a");
+    if (log)
+    {
+        // Logs allocation: PTR,address,size,file,line
+        fprintf(log, "PTR,%p,%zu,%s,%d\n", ptr, size, file, line);
         fclose(log);
     }
 
-    MemoryNode *current = (MemoryNode *)malloc(sizeof(MemoryNode));
-    if (current == NULL){
-        fprintf(stderr, "Failed to allocate memory for MemoryNode\n");
-        free(head);
-        return NULL;
-    }
-    FILE *log2=fopen("memory_log_2st_year.csv","r+");
-    if(log2){
-        fseek(log2, 0, SEEK_END);
-        fprintf(log2, "PTR2,%p,%zu,%s\n", current, size, file);
-        fclose(log2);
-    }
+    return ptr;
 }
-//change
-#define malloc(size) nodeTracker(size, __FILE__, __LINE__)
 
-#endif TRACKER2nd_H
+// macro
+#define malloc(size) track_allocation(size, __FILE__, __LINE__)
+
+#endif
