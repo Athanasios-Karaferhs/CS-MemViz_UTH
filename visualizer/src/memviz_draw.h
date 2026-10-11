@@ -2,8 +2,7 @@
 #include "imgui.h"
 #include <cmath>
 
-// A rounded, filled box with a border and up to two lines of text.
-// pos  = top-left corner in SCREEN coordinates, size = width/height in pixels.
+// pos  = top-left corner in screen coordi size = width/height in pixels.
 inline void DrawBox(ImDrawList* dl, ImVec2 pos, ImVec2 size, ImU32 fill,const char* line1, const char* line2 = nullptr) //pos is the top-left corner in screen coordinates, and size is the width and height. fill = color 
 {
     ImVec2 max(pos.x + size.x, pos.y + size.y);
