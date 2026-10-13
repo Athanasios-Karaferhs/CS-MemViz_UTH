@@ -1,6 +1,7 @@
 #include "imgui.h"
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx11.h"
+#include "memviz_draw.h"
 #include <d3d11.h>
 #include <tchar.h>
 #include <iostream>
@@ -9,6 +10,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <vector>
+
 
 // Data structure to hold allocation details
 struct Allocation {
@@ -65,6 +67,7 @@ struct NodeEntry {
     std::string address;
     size_t size = 0;
     std::string file;
+    int line = 0;
 };
 
 std::vector<NodeEntry> node_entries;
@@ -134,15 +137,18 @@ void ParseNodeLogFile(const std::string& filename, std::vector<NodeEntry>& out) 
         std::stringstream ss(line);
         NodeEntry e;
         std::string size_str;
+        std::string line_str;
 
         std::getline(ss, e.label, ',');
         std::getline(ss, e.address, ',');
         std::getline(ss, size_str, ',');
         std::getline(ss, e.file, ',');
+        std::getline(ss, line_str, ',');
 
-        try { e.size = std::stoull(size_str); } //turns the size text into a number. It is wrapped in 
-       // try/catch so a bad or header line is skipped (continue) instead of crashing the program
+        try { e.size = std::stoull(size_str); e.line = std::stoi(line_str); }
         catch (...) { continue; }
+       //turns the size text into a number. It is wrapped in try/catch so a bad or header line is skipped (continue) instead of crashing the program
+  
 
         out.push_back(e); // stores the finished entry
     }
@@ -202,6 +208,16 @@ int main(int, char**) {
         }
         ImGui::Separator();
 
+        //drawing
+        ImDrawList* dl = ImGui::GetWindowDrawList();  
+        ImVec2 o = ImGui::GetCursorScreenPos();
+        ImGui::Dummy(ImVec2(520, 100));   // reserve room for the drawing
+
+        //test draw(doesnt work with real memory).
+        DrawBox(dl, ImVec2(o.x + 10, o.y + 10), ImVec2(190, 64), IM_COL32(40, 90, 160, 255), "p", "at 0x7ffd...");
+        DrawBox(dl, ImVec2(o.x + 320, o.y + 10), ImVec2(190, 64), IM_COL32(150, 70, 40, 255), "42", "at 0x562e...");
+        DrawArrow(dl, ImVec2(o.x + 200, o.y + 42), ImVec2(o.x + 320, o.y + 42), IM_COL32_WHITE);
+
         if (ptr_snapshots.empty()) {
             ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "No pointer snapshots yet.");
         }
@@ -215,8 +231,10 @@ int main(int, char**) {
                 ImGui::PopID();     //give each row a unique ID(same here)
             }
         }
-        ImGui::End();
 
+    
+        ImGui::End();
+   
 
         //WINDOW 2: 2nd year mode, data structures
         ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x*0.5f, 0));
@@ -238,8 +256,7 @@ int main(int, char**) {
             for (int i = 0; i < (int)node_entries.size(); i++) {
                 const NodeEntry& n = node_entries[i];
                 ImGui::PushID(i);
-                ImGui::Text("%s | Address: %s | Size: %zu bytes | File: %s",
-                    n.label.c_str(), n.address.c_str(), n.size, n.file.c_str());
+                ImGui::Text("%s | Address: %s | Size: %zu bytes | File: %s | Line: %d", n.label.c_str(), n.address.c_str(), n.size, n.file.c_str(), n.line);
                 ImGui::PopID();
             }
         }
