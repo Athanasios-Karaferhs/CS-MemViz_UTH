@@ -11,16 +11,6 @@
 #include <unordered_map>
 #include <vector>
 
-
-// Data structure to hold allocation details
-struct Allocation {
-    size_t size = 0;
-    std::string file;
-    int line = 0;
-};
-
-using AllocMap = std::unordered_map<std::string, Allocation>;
-
 // Each window owns its own data so refreshing one doesn't wipe the other
 struct PtrSnapshot {
     std::string name, var_addr, target_addr, value;
@@ -86,42 +76,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 // Parse CSV log file into the given map
 // Format: EVENT,ADDRESS,SIZE,FILE,LINE   (EVENT = ALLOC or FREE) (year 1)
-void ParseLogFile(const std::string& filename, AllocMap& out) {
-    out.clear();
-    std::ifstream file(filename);
-    if (!file.is_open())
-        return;
 
-    std::string line;
-    while (std::getline(file, line)) {
-        if (line.empty())
-            continue;
-
-        std::stringstream ss(line);
-        std::string event_type, address, size_str, source_file, line_str;
-
-        std::getline(ss, event_type, ',');
-        std::getline(ss, address, ',');
-        std::getline(ss, size_str, ',');
-        std::getline(ss, source_file, ',');
-        std::getline(ss, line_str, ',');
-
-        if (event_type == "ALLOC") {
-            try {
-                Allocation alloc;
-                alloc.size = std::stoull(size_str);
-                alloc.file = source_file;
-                alloc.line = std::stoi(line_str);
-                out[address] = alloc;
-            }
-            catch (...) {
-            }
-        }
-        else if (event_type == "FREE") {
-            out.erase(address);
-        }
-    }
-}
 //(year 2)
 void ParseNodeLogFile(const std::string& filename, std::vector<NodeEntry>& out) {
     out.clear();
@@ -148,8 +103,7 @@ void ParseNodeLogFile(const std::string& filename, std::vector<NodeEntry>& out) 
         try { e.size = std::stoull(size_str); e.line = std::stoi(line_str); }
         catch (...) { continue; }
        //turns the size text into a number. It is wrapped in try/catch so a bad or header line is skipped (continue) instead of crashing the program
-  
-
+        
         out.push_back(e); // stores the finished entry
     }
 }
@@ -198,7 +152,7 @@ int main(int, char**) {
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
         
-        //WINDOW 1:1st year mode, heap status
+        //WINDOW 1:1st year mode, heap status   (that now only works for pointers, thinking of adding malloc to tracker_2 since in UTH we learn dynamic memory allocation in the second year.)  
          ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y));
         ImGui::Begin("Pointers | Memory allocation");
@@ -241,16 +195,16 @@ int main(int, char**) {
         ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y));
         ImGui::Begin("Data Structure | Live Connection Status");
         if (ImGui::Button("Refresh Memory Log (2nd Year)")) {
-            ParseNodeLogFile("memory_log_2st_year.csv", node_entries);
+            ParseNodeLogFile("memory_log_2nd_year.csv", node_entries);
         }
 
         ImGui::Separator();
 
         if (node_entries.empty()) {
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "No Nodes Tracked!");
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "No Memory Allocation Tracked!");
         }
         else {
-            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Active Nodes: %d", (int)node_entries.size());
+            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Active Memory Allocation: %d", (int)node_entries.size());
             ImGui::Separator();
 
             for (int i = 0; i < (int)node_entries.size(); i++) {

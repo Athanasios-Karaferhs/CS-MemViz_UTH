@@ -9,4 +9,5 @@ Release/
 *.user
 
 # Generated tracker logs
-memory_log.csv
+memory_log_1st_year.csv
+memory_log_2nd_year.csv
