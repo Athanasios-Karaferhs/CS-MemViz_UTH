@@ -272,13 +272,34 @@ void visual_rep(const std::vector<PtrSnapshot>& snaps, bool& show) {
     ImGuiIO& io = ImGui::GetIO();
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(io.DisplaySize);
-    ImGui::Begin("Visual Representation | Memory Allocation", nullptr,
-        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+    ImGui::Begin("Visual Representation | Memory Allocation");
 
     if (ImGui::Button("<- Back")) show = false;
     ImGui::Separator();
 
     ImGui::Text("Snapshots loaded: %d", (int)snaps.size());
+    const float boxW = 190, boxH = 64, margin = 10, rowGap = 20;    //margin is empty space around the box, rowGap is the space between rows
+    const float rowH = boxH + rowGap;            // distance from one row to the next
+
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    ImVec2 o = ImGui::GetCursorScreenPos();
+    ImGui::Dummy(ImVec2(520, margin + (float)snaps.size() * rowH));   // room for every row
+
+    if (snaps.empty()) {
+        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "No pointer snapshots yet.");
+    }
+    else {
+        for (int i = 0; i < (int)snaps.size(); i++) {
+            const PtrSnapshot& s = snaps[i];
+
+            ImVec2 boxPos(o.x + margin, o.y + margin + i * rowH);   // moves down with i
+            float midY = boxPos.y + boxH / 2;
+
+            DrawBox(dl, boxPos, ImVec2(boxW, boxH), IM_COL32(40, 90, 160, 255), s.name.c_str(), s.value.c_str());
+            DrawArrow(dl, ImVec2(boxPos.x + boxW, midY), ImVec2(boxPos.x + boxW + 100, midY), IM_COL32(255, 255, 0, 255));
+        }
+    }
+    
 
     ImGui::End();
 }

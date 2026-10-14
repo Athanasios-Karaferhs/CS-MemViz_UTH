@@ -2,7 +2,7 @@
 #include "imgui.h"
 #include <cmath>
 
-// pos  = top-left corner in SCREEN coordinates, size = width/height in pixels.
+// pos  = top-left corner in screen coordinates, size = width/height in pixels.
 inline void DrawBox(ImDrawList* dl, ImVec2 pos, ImVec2 size, ImU32 fill,
                     const char* line1, const char* line2 = nullptr)
 {
