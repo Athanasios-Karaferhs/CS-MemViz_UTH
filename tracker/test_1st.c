@@ -6,17 +6,6 @@
 
 int main()
 {
-
-    printf("Allocating memory...\n");
-
-    // This will be logged as an ALLOC at line 13
-    int *array_leaked = (int *)malloc(5 * sizeof(int));
-
-    // This will be logged as an ALLOC at line 16, and FREE at line 18
-    int *array_safe = (int *)malloc(5 * sizeof(int));
-
-    free(array_safe);
-
     int *p;
     *p = 40;
     TRACK_PTR(p);

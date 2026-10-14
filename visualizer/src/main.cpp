@@ -107,7 +107,10 @@ void ParseNodeLogFile(const std::string& filename, std::vector<NodeEntry>& out) 
         out.push_back(e); // stores the finished entry
     }
 }
-
+bool show_visual = false;
+bool is_clear = true;
+bool fake_snapshot = false;
+bool show_pointers = false;
 int main(int, char**) {
     // Create application window
     WNDCLASSEXW wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"ImGui Example", nullptr };
@@ -135,6 +138,7 @@ int main(int, char**) {
     ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
 
+    void visual_rep(const std::vector<PtrSnapshot>&snaps, bool& show);
     bool running = true;
     while (running) {
         MSG msg;
@@ -146,77 +150,100 @@ int main(int, char**) {
         if (!running) break;
 
         ImGuiIO& io = ImGui::GetIO();
-
+        
         // Start one ImGui frame for the entire application
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
-        
-        //WINDOW 1:1st year mode, heap status   (that now only works for pointers, thinking of adding malloc to tracker_2 since in UTH we learn dynamic memory allocation in the second year.)  
-         ImGui::SetNextWindowPos(ImVec2(0, 0));
-        ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y));
-        ImGui::Begin("Pointers | Memory allocation");
-        ImGui::Text("Pointer snapshots");
-        if (ImGui::Button("Refresh Memory Log (1st Year)")) {
-            ParsePtrLogFile("memory_log_1st_year.csv", ptr_snapshots);
-        }
-        ImGui::Separator();
-
-        //drawing
-        ImDrawList* dl = ImGui::GetWindowDrawList();  
-        ImVec2 o = ImGui::GetCursorScreenPos();
-        ImGui::Dummy(ImVec2(520, 100));   // reserve room for the drawing
-
-        //test draw(doesnt work with real memory).
-        DrawBox(dl, ImVec2(o.x + 10, o.y + 10), ImVec2(190, 64), IM_COL32(40, 90, 160, 255), "p", "at 0x7ffd...");
-        DrawBox(dl, ImVec2(o.x + 320, o.y + 10), ImVec2(190, 64), IM_COL32(150, 70, 40, 255), "42", "at 0x562e...");
-        DrawArrow(dl, ImVec2(o.x + 200, o.y + 42), ImVec2(o.x + 320, o.y + 42), IM_COL32_WHITE);
-
-        if (ptr_snapshots.empty()) {
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "No pointer snapshots yet.");
-        }
-        else {  
-            for (int i = 0; i < (int)ptr_snapshots.size(); i++) {   //castin at ptr>snaphots.size() cause of warning with signed/unsigned comparison
-                const PtrSnapshot& s = ptr_snapshots[i];
-                ImGui::PushID(i);   //give each row a unique ID(not strictly necessary but good for buttons)
-                ImGui::Text("%s  (at %s)  ->  %s  | value: %s | %zu bytes | %s : line %d",
-                    s.name.c_str(), s.var_addr.c_str(), s.target_addr.c_str(),
-                    s.value.c_str(), s.size, s.file.c_str(), s.line);
-                ImGui::PopID();     //give each row a unique ID(same here)
-            }
-        }
-
-    
-        ImGui::End();
-   
-
-        //WINDOW 2: 2nd year mode, data structures
-        ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x*0.5f, 0));
-        ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y));
-        ImGui::Begin("Data Structure | Live Connection Status");
-        if (ImGui::Button("Refresh Memory Log (2nd Year)")) {
-            ParseNodeLogFile("memory_log_2nd_year.csv", node_entries);
-        }
-
-        ImGui::Separator();
-
-        if (node_entries.empty()) {
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "No Memory Allocation Tracked!");
-        }
+        if (show_visual == true)
+            visual_rep(ptr_snapshots, show_visual);
         else {
-            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Active Memory Allocation: %d", (int)node_entries.size());
+            //WINDOW 1:1st year mode, heap status   (that now only works for pointers, thinking of adding malloc to tracker_2 since in UTH we learn dynamic memory allocation in the second year.)  
+            ImGui::SetNextWindowPos(ImVec2(0, 0));
+            ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y));
+            ImGui::Begin("Pointers | Memory allocation");
+            ImGui::Text("Pointer snapshots");
+            
+            if (ImGui::Button("see visual representation(pointer)")) {
+                ParsePtrLogFile("memory_log_1st_year.csv", ptr_snapshots);
+                show_visual = true;
+                fake_snapshot = true;
+            }
+
+           
+            if (ImGui::Button("Refresh Memory Log (1st Year)")) {
+                ParsePtrLogFile("memory_log_1st_year.csv", ptr_snapshots);
+                show_pointers = true;
+                fake_snapshot = false;
+            }
+
+                
             ImGui::Separator();
 
-            for (int i = 0; i < (int)node_entries.size(); i++) {
-                const NodeEntry& n = node_entries[i];
-                ImGui::PushID(i);
-                ImGui::Text("%s | Address: %s | Size: %zu bytes | File: %s | Line: %d", n.label.c_str(), n.address.c_str(), n.size, n.file.c_str(), n.line);
-                ImGui::PopID();
+            // by fake_snapshot I mean that the user clicked the visual representation button but there are no snapshots yet, so we don't want to show the "no pointer snapshots yet" message, because it would be confusing. Instead we show a message that says "no pointer snapshots yet" but in green, to indicate that it's not an error.
+            // by show_pointers the user click Refrecsh memory Log so we show the user if there are any Pointers.
+            // by clear I mean we clear the screen
+            // by show_visual we show the visual representation of pointers (if it gets way too comfusing I will add a new show visual button)
+            if (ptr_snapshots.empty() || fake_snapshot == true) {
+                ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "No pointer snapshots yet.");
             }
+            else {
+                if(show_pointers == true){
+                    for (int i = 0; i < (int)ptr_snapshots.size(); i++) {   //castin at ptr>snaphots.size() cause of warning with signed/unsigned comparison
+                        const PtrSnapshot& s = ptr_snapshots[i];
+                        ImGui::PushID(i);   //give each row a unique ID(not strictly necessary but good for buttons)
+                        ImGui::Text("%s  (at %s)  ->  %s  | value: %s | %zu bytes | %s : line %d",
+                            s.name.c_str(), s.var_addr.c_str(), s.target_addr.c_str(),
+                            s.value.c_str(), s.size, s.file.c_str(), s.line);
+                        ImGui::PopID();     //give each row a unique ID(same here)
+                        is_clear = false;
+                        fake_snapshot = false;
+                    }
+                }
+            }
+
+            ImGui::SetCursorPos(ImVec2(580.0f, 730.0f));
+            if (ImGui::Button("clear")){
+                ptr_snapshots.clear();
+                node_entries.clear();
+                is_clear = true;
+                show_pointers = false; 
+           }
+
+
+            ImGui::End();
+
+
+            //WINDOW 2: 2nd year mode, data structures
+            ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, 0));
+            ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y));
+            ImGui::Begin("Data Structure | Live Connection Status");
+            if (ImGui::Button("Refresh Memory Log (2nd Year)")) {
+                ParseNodeLogFile("memory_log_2nd_year.csv", node_entries);
+            }
+
+            ImGui::Separator();
+
+            if (node_entries.empty()) {
+                ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "No Memory Allocation Tracked!");
+            }
+            else {
+                    ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Active Memory Allocation: %d", (int)node_entries.size());
+                    ImGui::Separator();
+                
+
+                for (int i = 0; i < (int)node_entries.size(); i++) {
+                    const NodeEntry& n = node_entries[i];
+                    ImGui::PushID(i);
+                    ImGui::Text("%s | Address: %s | Size: %zu bytes | File: %s | Line: %d", n.label.c_str(), n.address.c_str(), n.size, n.file.c_str(), n.line);
+                    ImGui::PopID();
+                }
+            }
+
+            ImGui::End();
+        
         }
-
-        ImGui::End();
-
+       
 
         // Rendering
         ImGui::Render();
@@ -226,8 +253,8 @@ int main(int, char**) {
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
         g_pSwapChain->Present(1, 0); // vsync
-    }
-
+    
+}
     // Cleanup
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
@@ -238,6 +265,22 @@ int main(int, char**) {
     ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
 
     return 0;
+}
+
+//3nd window
+void visual_rep(const std::vector<PtrSnapshot>& snaps, bool& show) {
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(io.DisplaySize);
+    ImGui::Begin("Visual Representation | Memory Allocation", nullptr,
+        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+
+    if (ImGui::Button("<- Back")) show = false;
+    ImGui::Separator();
+
+    ImGui::Text("Snapshots loaded: %d", (int)snaps.size());
+
+    ImGui::End();
 }
 
 //directX 11 helpers

@@ -39,12 +39,12 @@ static inline void track_ptr(const char *name, int **ptr_var, size_t size, const
     if (!log)
         return;
 
-    int *target = *ptr_var;
+    int *target = *ptr_var; // what ptr_var holds
 
     if (target != NULL)
     {
         fprintf(log, "PTR,%s,%p,%p,%d,%zu,%s,%d\n",
-                name, (void *)ptr_var, (void *)target, *target, size, file, line);
+                name, (void *)ptr_var, (void *)target, *target, size, file, line); // SOS: 2 takes (void *)ptr_var, the address of the pointer variable.3 takes (void *)target, the address it points to .4 takes *target, the value there.
     }
     else
     {
