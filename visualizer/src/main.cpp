@@ -209,8 +209,6 @@ int main(int, char**) {
                 is_clear = true;
                 show_pointers = false; 
            }
-
-
             ImGui::End();
 
 
@@ -294,13 +292,16 @@ void visual_rep(const std::vector<PtrSnapshot>& snaps, bool& show) {
 
             ImVec2 boxPos(o.x + margin, o.y + margin + i * rowH);   // moves down with i
             float midY = boxPos.y + boxH / 2;
-
-            DrawBox(dl, boxPos, ImVec2(boxW, boxH), IM_COL32(40, 90, 160, 255), s.name.c_str(), s.value.c_str());
+    
+            DrawBox(dl, boxPos, ImVec2(boxW, boxH), IM_COL32(40, 90, 160, 255), s.name.c_str(), s.var_addr.c_str());
             DrawArrow(dl, ImVec2(boxPos.x + boxW, midY), ImVec2(boxPos.x + boxW + 100, midY), IM_COL32(255, 255, 0, 255));
+           
+            if (s.target_addr.c_str() != nullptr && s.target_addr.c_str() != "") {
+              DrawBox(dl, ImVec2(boxPos.x + boxW +100, boxPos.y), ImVec2(boxW, boxH), IM_COL32(225, 0, 0, 225), "values", s.value.c_str());
+              DrawBox(dl, ImVec2(boxPos.x + 285+boxW, boxPos.y), ImVec2(boxW, boxH), ImColor(225, 0, 0, 225), "Target", s.target_addr.c_str());
+            }
         }
     }
-    
-
     ImGui::End();
 }
 
