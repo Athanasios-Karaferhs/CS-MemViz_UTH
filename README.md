@@ -85,5 +85,8 @@ int main() {
 
 ### Screenshots
 
-.\CS-MemViz\visual_pic\working.png 
-.CS-MemViz\visual_pic\Not_working.png
+![Visualizer in working state](visual_pic/working.png)
+*Visualizer in a working state.*
+
+![Visualizer showing leaks](visual_pic/Not_working.png)
+*Visualizer showing a memory leak.*
