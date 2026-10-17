@@ -50,7 +50,7 @@ int main() {
 ```
 
 ### Second Year: Data Structures
-To track **malloc** and **free** automatically, simply include tracker2nd.h as the last include. You do not need to change how you write your code, the tracker intercepts standard memory allocations behind the scenes.
+To track **malloc** and **free** automatically, simply include `tracker2nd.h` as the last include. You do not need to change how you write your code, the tracker intercepts standard memory allocations behind the scenes.
 ```c
 #include <stdio.h>
 #include <stdlib.h>
