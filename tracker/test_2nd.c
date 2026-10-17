@@ -30,6 +30,7 @@ int main()
   my_list->length = 1;
 
   printf("List created with length %zu and data %d\n", my_list->length, my_list->head->data);
+  /*everyone from here on is currently been fixed. Do NOT use malloc without been needed in a linked list.(fix-idea:track if a pointer is currently seen the space you just malloced)*/
   int *x = malloc(20);
   printf("Malloc has been complited\n");
   free(x);
