@@ -1,24 +1,40 @@
 #include <stdio.h>
 #include <stdlib.h>
-//last
+// last
 #include "tracker2nd.h"
+
+typedef struct Node
+{
+  int data;
+  struct Node *next;
+} Node;
+
+typedef struct List
+{
+  Node *head;
+  size_t length;
+} List;
 
 int main()
 {
-    // Clear the old log file for fresh testing
-    remove("memory_log_2st_year.csv");
 
-    printf("Allocating memory...\n");
+  List *my_list = (List *)malloc(sizeof(List));
+  my_list->head = NULL;
+  my_list->length = 0;
 
-    // This will be logged as an ALLOC at line 13
-    int *array_leaked = (int *)nodeTracker(10 * sizeof(int), __FILE__);
+  Node *first_node = (Node *)malloc(sizeof(Node));
+  first_node->data = 42;
+  first_node->next = NULL;
 
-    // This will be logged as an ALLOC at line 16, and FREE at line 18
-    int *array_safe = (int *)nodeTracker(5 * sizeof(int), __FILE__);
+  my_list->head = first_node;
+  my_list->length = 1;
 
-  //  free(array_safe);
+  printf("List created with length %zu and data %d\n", my_list->length, my_list->head->data);
+  /*everyone from here on is currently been fixed. Do NOT use malloc without been needed in a linked list.(fix-idea:track if a pointer is currently seen the space you just malloced)*/
+  int *x = malloc(20);
+  printf("Malloc has been complited\n");
+  free(x);
+  printf("Free has been complited\n");
 
-    printf("Done. Check memory_log.csv!\n");
-
-    return 0;
+  return 0;
 }
