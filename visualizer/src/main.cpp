@@ -198,7 +198,7 @@ void SetupCustomStyle()
     ImVec4* colors = style.Colors;
     //backgrounds
     colors[ImGuiCol_WindowBg] =
-        ImVec4(0.055f, 0.065f, 0.090f, 1.00f);
+        ImVec4(0.05f, 0.065f, 0.090f, 1.00f);
 
     colors[ImGuiCol_ChildBg] =
         ImVec4(0.040f, 0.050f, 0.070f, 1.00f);
@@ -412,11 +412,19 @@ int main()
                 heapLogStatus = "Cannot open memory_log_1st_year.csv";
             }
         }
+      
 
         ImGui::SameLine();
         ImGui::TextDisabled("%d snapshot(s)", static_cast<int>(ptr_snapshots.size()));
 
         ImGui::TextColored(heapLogLoadFailed ? ImVec4(1.00f, 0.35f, 0.35f, 1.00f) : ImVec4(0.48f, 0.60f, 0.70f, 1.00f), "%s", heapLogStatus.c_str());
+
+        ImGui::Spacing();
+
+        ImGui::SameLine();
+        ImGui::SetCursorPos(ImVec2(520.0f,150.0f));
+        if (ImGui::Button("Clear"))
+            ptr_snapshots.clear();
 
         ImGui::Spacing();
 
@@ -431,7 +439,7 @@ int main()
             ImGui::TextWrapped("The log is loaded but contains no pointer snapshots yet.");
         }
         else {
-            for (size_t i = 0; i < ptr_snapshots.size(); ++i) {
+            for (size_t i = 0; i < ptr_snapshots.size(); ++i) {         //size_t cause .size() returns a type of size_t, preventing overflow/underflow as we maximize the pos
                 const PtrSnapshot& s = ptr_snapshots[i];
                 ImGui::PushID(static_cast<int>(i));
 
@@ -452,6 +460,8 @@ int main()
                 ImGui::Separator();
                 ImGui::PopID();
             }
+       
+        
         }
 
         ImGui::EndChild();
@@ -465,7 +475,7 @@ int main()
         ImGui::SetNextWindowSize(ImVec2(600.0f, 400.0f), ImGuiCond_FirstUseEver);
         ImGui::Begin("CS MemViz | Data Structures");
 
-        ImGui::TextColored(ImVec4(0.75f, 0.48f, 1.00f, 1.00f), "2ND YEAR  /  DATA STRUCTURES");
+        ImGui::TextColored(ImVec4(1.00f, 0.76f, 0.25f, 1.00f), "2ND YEAR  /  DATA STRUCTURES");
 
         ImGui::TextDisabled("Monitor nodes and inspect their allocation details.");
         ImGui::Separator();
@@ -500,6 +510,11 @@ int main()
 
         ImGui::Spacing();
 
+        ImGui::SameLine();
+        ImGui::SetCursorPos(ImVec2(520.0f, 150.0f));
+        if (ImGui::Button("Clear"))
+            node_allocs.clear();
+
         ImGui::BeginChild("NodeAllocationList", ImVec2(0.0f, 0.0f), true);
 
         if (!nodeLogLoaded) {
@@ -527,7 +542,7 @@ int main()
             for (const auto& pair : node_allocs) {
 
                 ImGui::PushID((pair.first + "_node").c_str());
-                ImGui::TextColored(ImVec4(0.75f, 0.48f, 1.00f, 1.00f), "NODE %d", nodeNumber);
+                ImGui::TextColored(ImVec4(0.89f, 1.69f, 0.59f, 1.00f), "NODE %d", nodeNumber);
                 ImGui::SameLine();
                 ImGui::TextWrapped("%s", pair.first.c_str());
                 ImGui::Text("Size: %zu bytes", pair.second.size);
@@ -572,12 +587,12 @@ int main()
                 visualNodes.push_back(&pair);
             }
 
-            std::sort(
+            std::sort(  //sort the vector of pointers based on the address (key) of each entry
                 visualNodes.begin(),
                 visualNodes.end(),
                 [](const AllocMap::value_type* a,
                     const AllocMap::value_type* b) {
-                        return a->first < b->first;
+                        return a->first < b->first; //returns true if the address of a is less than the address of b
                 }
             );
 
@@ -598,23 +613,17 @@ int main()
 
                 const auto& pair = *visualNodes[i];
 
-                float x = startX +
-                    static_cast<float>(i) * (nodeWidth + spacing);
+                float x = startX +static_cast<float>(i) * (nodeWidth + spacing);
 
                 float y = startY;
 
                 ImVec2 nodeMin(x, y);
 
-                ImVec2 nodeMax(
-                    x + nodeWidth,
-                    y + nodeHeight
+                ImVec2 nodeMax(x + nodeWidth,y + nodeHeight
                 );
 
                 // Node background.
                 drawList->AddRectFilled(nodeMin, nodeMax, IM_COL32(30, 40, 62, 255), 9.0f);
-
-                // Node outline.
-                drawList->AddRect(nodeMin, nodeMax, IM_COL32(125, 90, 235, 255), 9.0f, 0, 2.0f);
 
                 // Header separator.
                 drawList->AddLine(ImVec2(x + 10.0f, y + 32.0f), ImVec2(x + nodeWidth - 10.0f, y + 32.0f), IM_COL32(75, 90, 125, 255), 1.0f);
@@ -633,7 +642,7 @@ int main()
                 drawList->AddText(ImVec2(x + 12.0f, y + 68.0f), IM_COL32(120, 225, 175, 255), sizeText.c_str());
 
                 // Draw an illustrative connection to the next node.
-                if (i + 1 < visualNodes.size()) {
+                if (i + 1 < visualNodes.size()) {   //draws for each i+1 node
                     float lineY = y + nodeHeight / 2.0f;ImVec2 lineStart(nodeMax.x, lineY);
 
                     ImVec2 lineEnd(nodeMax.x + spacing, lineY);
@@ -755,7 +764,7 @@ bool CreateDeviceD3D(HWND hWnd)
     return true;
 }
 
-//dir 11 cleanup dev
+//dir  cleanup dev
 void CleanupDeviceD3D()
 {
     CleanupRenderTarget();
@@ -776,7 +785,7 @@ void CleanupDeviceD3D()
     }
 }
 
-//dir 11 create render target
+//dir  create render target
 void CreateRenderTarget()
 {
     if (g_pSwapChain == nullptr || g_pd3dDevice == nullptr) {
