@@ -1,8 +1,8 @@
 # CS-MemViz | Memory & Data Structure Visualizer 
 
-**CS-MemViz** is an educational memory leak debugger and visualizer built specifically for computer science students at the Department of Informatics and Telecommunications, University of Thessaly (DIT UTH). 
+**CS-MemViz** is an educational memory leak debugger and visualizer built specifically for computer science students. 
 
-Transitioning from basic programming to pointers and dynamic data structures can be challenging. CS-MemViz bridges this gap by providing a real-time, visual representation of what is actually happening inside the heap. 
+Goning from basic programming to pointers and dynamic data structures can be challenging. CS-MemViz bridges this gap by providing a real-time, visual representation of what is actually happening inside the heap. 
 
 ##  Features
 
