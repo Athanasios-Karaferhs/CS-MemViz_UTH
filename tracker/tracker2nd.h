@@ -1,22 +1,14 @@
 #ifndef TRACKER2nd_H
 #define TRACKER2nd_H
-int is_rested = 0;
+
 #include <stdio.h>
 #include <stdlib.h>
-#include "malloc_prob.h"
-static inline void track2_reset(void);
-#define MEMVIZ_PATH_2ND "/CS-MemViz/source/repos/CS_MemViz/CS_MemViz/memory_log_2nd_year.csv"
-void file_delete();
+#include <string.h>
 
-void file_delete()
-{
-    FILE *filename = fopen("malloc_prob.h", "w");
-    if (filename)
-    {
-        fprintf(filename, "#ifndef MALLOC_PROB_H\n#define MALLOC_PROB_H\n\n#define MALLOC_PROBABILITY 0.1\n#define ANALYZED_LINES 0\n\n#endif ");
-        fclose(filename);
-    }
-}
+#define MEMVIZ_PATH_2ND "/CS-MemViz/source/repos/CS_MemViz/CS_MemViz/memory_log_2nd_year.csv"
+#define PROB_CSV "malloc_prob.csv"
+
+static int is_rested = 0;
 
 static inline const char *memviz_log_path_2nd(void)
 {
@@ -35,6 +27,30 @@ static inline void track2_reset(void)
     FILE *log = fopen(memviz_log_path_2nd(), "w");
     if (log)
         fclose(log);
+
+    remove(PROB_CSV); /* fresh probability file for each run */
+}
+
+/* returns 1 = pass, 0 = skip, -1 = error; reads the LAST row Python wrote */
+static inline int read_last_decision(double *prob)
+{
+    FILE *f = fopen(PROB_CSV, "r");
+    if (!f)
+        return -1;
+
+    char buf[256], last[256] = "";
+    while (fgets(buf, sizeof(buf), f))
+        if (buf[0] >= '0' && buf[0] <= '9') /* skip the header row */
+            strcpy(last, buf);
+    fclose(f);
+
+    int s, e, passed;
+    double p;
+    if (sscanf(last, "%d,%d,%lf,%d", &s, &e, &p, &passed) != 4)
+        return -1;
+
+    *prob = p;
+    return passed;
 }
 
 static inline void *track_allocation(size_t size, const char *file, int line)
@@ -45,41 +61,36 @@ static inline void *track_allocation(size_t size, const char *file, int line)
         is_rested = 1;
     }
 
-    char start[100];
-    snprintf(start, sizeof(start), "python MemProp.py test_2nd.c malloc_prob.h %d %d", line, line + 2);
-
-    int pyt_result = system(start);
-    if (pyt_result != 0)
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd), "python MemProp.py \"%s\" %d %d", file, line, line + 2);
+    if (system(cmd) != 0)
     {
         fprintf(stderr, "Error executing Python script\n");
         return NULL;
     }
-    if (MALLOC_PROBABILITY_ + {count} <= 0.0)
-    {
-        fprintf(stderr, "Prop <0.0 Nothing to do line %d\n", line);
-        FILE *log = fopen(memviz_log_path_2nd(), "a");
-        if (log)
-        {
-            fprintf(log, "false,%s,%d\n", file, line);
-            fclose(log);
-        }
-        // file_delete();
-    }
-    else
-    {
-        void *ptr = malloc(size);
-        if (ptr == NULL)
-            return NULL;
 
-        FILE *log = fopen(memviz_log_path_2nd(), "a");
-        if (log)
-        {
-            fprintf(log, "ALLOC,%p,%zu,%s,%d\n", ptr, size, file, line);
-            fclose(log);
-        }
-        // file_delete();
-        return ptr;
+    double prob = 0.0;
+    int passed = read_last_decision(&prob);
+    if (passed < 0)
+    {
+        fprintf(stderr, "Could not read %s\n", PROB_CSV);
+        return NULL;
     }
+
+    void *ptr = malloc(size); /* the program must keep working either way */
+    if (ptr == NULL)
+        return NULL;
+
+    FILE *log = fopen(memviz_log_path_2nd(), "a");
+    if (log)
+    {
+        if (passed)
+            fprintf(log, "ALLOC,%p,%zu,%s,%d\n", ptr, size, file, line);
+        else
+            fprintf(log, "SKIP,%p,%zu,%s,%d\n", ptr, size, file, line);
+        fclose(log);
+    }
+    return ptr;
 }
 
 static inline void track_free(void *ptr, const char *file, int line)
